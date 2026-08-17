@@ -34,6 +34,8 @@
       font-family: "DM Sans", sans-serif;
       overflow: hidden;
       overscroll-behavior: none;
+      padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+      box-sizing: border-box;
     }
 
     button, a { -webkit-tap-highlight-color: transparent; }
@@ -48,6 +50,8 @@
       display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
       background: var(--ink);
       transition: opacity 550ms ease 150ms;
+      padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+      box-sizing: border-box;
     }
     .landing h1 {
       margin: 0; font-family: "Honk", "Archivo Black", sans-serif; font-size: 5.2rem; line-height: 0.55;
@@ -111,7 +115,7 @@
     .game-heading kbd { padding: 2px 5px; border: 1px solid rgba(255,255,255,0.55); border-radius: 3px; font: inherit; font-size: 0.65rem; }
 
     .game-board {
-      position: relative; height: clamp(520px, 81vh, 720px); overflow: hidden;
+      position: relative; height: clamp(520px, 81vh, 720px); height: clamp(520px, 81dvh, 720px); overflow: hidden;
       touch-action: manipulation; cursor: pointer; isolation: isolate;
       background: radial-gradient(circle at 50% 45%, rgba(255,255,255,0.75), transparent 45%), linear-gradient(180deg, #f2e2cd, #e9d3b6);
     }
@@ -250,6 +254,8 @@
       backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
       transition: opacity 400ms ease;
       pointer-events: auto;
+      padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+      box-sizing: border-box;
     }
     .birthday-banner[hidden] { display: none; }
 
@@ -309,7 +315,7 @@
       .game-card { padding: 20px; border-width: 7px; }
       .game-heading { grid-template-columns: 1fr; gap: 4px; }
       .game-heading p { max-width: 320px; }
-      .game-board { height: min(86vh, 675px); min-height: 520px; }
+      .game-board { height: min(86vh, 675px); height: min(86dvh, 675px); min-height: 520px; }
       .height-markers { display: none; }
     }
 
