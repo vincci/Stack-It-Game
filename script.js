@@ -2,10 +2,10 @@
   const BASE_WIDTH = 240;
   const PERFECT_MARGIN = 5;
   const START_SPEED = 190;
-  const MAX_SPEED = 430;
+  const MAX_SPEED = 330;
   const BIRTHDAY_HEIGHT = 13;
   const MAX_SHRINK = 0.2;
-  const SPEED_GROWTH = 1.15;
+  const SPEED_GROWTH = 1;
   const CANDLE_SCALE = 1.2;
   const CANDLE_FIXED_WIDTH = BASE_WIDTH / 20;
 
