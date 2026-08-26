@@ -1,0 +1,15 @@
+{
+  "name": "stack-it-game",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "dev": "npm run build && wrangler pages dev .pages-dist --port 8788",
+    "db:migrate:local": "wrangler d1 migrations apply stack-it-game-leaderboard-dev --local",
+    "test": "node --test test/*.test.mjs"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}

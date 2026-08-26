@@ -1,8 +1,8 @@
-Happy Birthday, Derren — Stack It Up
+Stack It Higher
 
-A small birthday microsite built as an interactive stacking game. No build
-step, no framework, no bundler — three plain files (`index.html`,
-`style.css`, `script.js`). Drop it on any static host and it works.
+A small public stacking game with a Cloudflare D1-backed global leaderboard.
+The frontend remains plain HTML, CSS, and JavaScript with no framework or
+bundler. Cloudflare Pages Functions provide the two same-origin API routes.
 
 Built for Derren's Birthday 
 
@@ -13,17 +13,16 @@ Built for Derren's Birthday
 A landing screen leads into a Stack-style tower-building game. Stack blocks
 as neatly as possible; each miss trims the block down, each near-perfect hit
 pauses the game for a celebratory beat. The final tier is a lit candle
-instead of a block — placing it successfully triggers a confetti burst and a
-floating birthday card, no more blocks spawn after that, the reveal is the
-ending.
+instead of a block — placing it successfully triggers a confetti burst. Every
+completed run then continues to score submission and the leaderboard.
 
-Missing the stack before the candle shows a (very direct) game-over screen
-instead. This, not just decorated.
+The original birthday card remains freely available from the game header; it
+is no longer something a player has to earn by completing the game.
 
 
 ## Stack / dependencies
 
-The site is split into three local files:
+The game frontend is split into three local files:
 
 - **`index.html`** — markup only.
 - **`style.css`** — all styling, linked via `<link rel="stylesheet" href="style.css">`.
@@ -44,10 +43,42 @@ Everything else — fonts aside — is self-contained: no images as separate
 files (the sticker on the birthday card is embedded as base64 directly in
 `index.html`), no other assets to keep in sync.
 
-**Dependency risk, worth knowing:** if jsDelivr is unreachable when the
-page loads, `new JSConfetti()` will throw and break the whole script. Low
-probability given jsDelivr's reliability, but it's the one point where this
-site isn't fully self-contained.
+**Dependency risk, worth knowing:** if jsDelivr is unreachable, confetti is
+skipped while the game and leaderboard continue to work.
+
+## Leaderboard API
+
+- `POST /api/score` accepts `{ "name": "Vincent", "score": 13 }`.
+- `GET /api/leaderboard` returns the global top 10.
+
+Names are trimmed, limited to 12 characters, and restricted to ordinary
+letters, numbers, spaces, dots, apostrophes, and hyphens. The server accepts
+integer scores from 0 through the game's actual maximum of 13. D1 queries use
+prepared statements and responses are not cached.
+
+The schema is versioned in `migrations/`. The Pages Function binding is named
+`DB` and is configured in `wrangler.jsonc`.
+
+## Local development
+
+```sh
+npm install
+npm run db:migrate:local
+npm run dev
+```
+
+Then open `http://localhost:8788`. Wrangler persists the local D1 database in
+`.wrangler/`, which is ignored by Git.
+
+Run the API test suite with:
+
+```sh
+npm test
+```
+
+`npm run build` creates `.pages-dist/` with only the three public frontend
+files. In Cloudflare Pages, use `npm run build` as the build command and
+`.pages-dist` as the build output directory.
 
 ## Known limitations
 
@@ -66,9 +97,9 @@ site isn't fully self-contained.
 
 ## Editing
 
-Three files. Search for the relevant `id`, `class`, or constant name and
-edit in place — CSS is in `style.css`, markup in `index.html`, game logic
-in `script.js`. There's no build step to run afterward; save and refresh.
+The frontend remains in `index.html`, `style.css`, and `script.js`. Pages
+Functions live under `functions/api/`, and versioned D1 schema changes live
+under `migrations/`.
 
 ## Credits
 

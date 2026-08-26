@@ -1,0 +1,6 @@
+node_modules/
+.npm-cache/
+.wrangler/
+.wrangler-config/
+.pages-dist/
+.dev.vars
