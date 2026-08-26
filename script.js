@@ -8,6 +8,7 @@
   const SPEED_GROWTH = 1.15;
   const CANDLE_SCALE = 1.2;
   const CANDLE_FIXED_WIDTH = BASE_WIDTH / 20;
+  const MAX_NAME_LENGTH = 12;
 
   const board = requireElement("gameBoard");
   const stackLayer = requireElement("stackLayer");
@@ -16,14 +17,27 @@
   const gameOver = requireElement("gameOver");
   const playAgainButton = requireElement("playAgainButton");
   const finalScoreElement = requireElement("finalScore");
+  const yourScoreElement = requireElement("yourScore");
+  const scoreEntryPanel = requireElement("scoreEntryPanel");
+  const leaderboardPanel = requireElement("leaderboardPanel");
+  const leaderboardList = requireElement("leaderboardList");
+  const leaderboardEmpty = requireElement("leaderboardEmpty");
+  const scoreForm = requireElement("scoreForm");
+  const playerNameInput = requireElement("playerName");
+  const nameError = requireElement("nameError");
+  const submitError = requireElement("submitError");
+  const submitScoreButton = requireElement("submitScoreButton");
   const perfectCallout = requireElement("perfectCallout");
   const birthdayBanner = requireElement("birthdayBanner");
+  const birthdayNoteButton = requireElement("birthdayNoteButton");
   const landing = requireElement("landing");
   const landingButton = requireElement("landingButton");
   const cardPlayAgainButton = requireElement("cardPlayAgain");
 
   const tones = ["tomato", "mustard", "mint", "sky", "lilac", "cream"];
-  const jsConfetti = new JSConfetti();
+  const jsConfetti = typeof JSConfetti === "function"
+    ? new JSConfetti()
+    : { clearCanvas() {}, addConfettiAtPosition() {} };
   const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   let state = "idle";
@@ -38,8 +52,11 @@
   let perfectPauseTimer = 0;
   let confettiTimer = 0;
   let flameTimer = 0;
-  let birthdayTimer = 0;
-  let hasCelebratedBirthday = false;
+  let completionTimer = 0;
+  let hasCompletedTower = false;
+  let scoreSubmissionInFlight = false;
+  let submittedEntry = null;
+  let birthdayReturnFocus = null;
 
   function requireElement(id) {
     const element = document.getElementById(id);
@@ -92,7 +109,7 @@
     window.clearTimeout(perfectPauseTimer);
     window.clearTimeout(confettiTimer);
     window.clearTimeout(flameTimer);
-    window.clearTimeout(birthdayTimer);
+    window.clearTimeout(completionTimer);
 
     state = "playing";
     score = 0;
@@ -101,13 +118,15 @@
     lastFrameTime = 0;
     movingBlock = null;
     tower = [];
-    hasCelebratedBirthday = false;
+    hasCompletedTower = false;
+    submittedEntry = null;
 
     gameOver.hidden = true;
     startScreen.hidden = true;
+    birthdayNoteButton.disabled = true;
     perfectCallout.classList.remove("is-visible");
-    birthdayBanner.hidden = true;
-    birthdayBanner.classList.remove("is-visible");
+    closeBirthdayNote(false);
+    resetScoreOverlay();
     jsConfetti.clearCanvas();
     stackLayer.replaceChildren();
     board.classList.remove("is-over", "is-perfect", "is-complete");
@@ -228,13 +247,14 @@
     score += 1;
     speed = Math.min(MAX_SPEED, speed * SPEED_GROWTH);
 
-    if (!hasCelebratedBirthday && score >= BIRTHDAY_HEIGHT) {
-      hasCelebratedBirthday = true;
+    if (!hasCompletedTower && score >= BIRTHDAY_HEIGHT) {
+      hasCompletedTower = true;
       state = "complete";
       board.classList.remove("is-playing");
       board.classList.add("is-complete");
       cancelAnimationFrame(animationFrame);
-      celebrateBirthday(current.element);
+      celebrateTower(current.element);
+      completionTimer = window.setTimeout(finishGame, 1900);
       return;
     }
 
@@ -361,7 +381,7 @@
     });
   }
 
-  function celebrateBirthday(candleElement) {
+  function celebrateTower(candleElement) {
     window.clearTimeout(flameTimer);
     flameTimer = window.setTimeout(() => {
       const flame = candleElement.querySelector(".candle-flame");
@@ -374,16 +394,28 @@
     confettiTimer = window.setTimeout(() => {
       burstConfetti();
     }, 1200);
+  }
 
-    window.clearTimeout(birthdayTimer);
-    birthdayTimer = window.setTimeout(() => {
-      randomizeDecorations();
-      birthdayBanner.hidden = false;
-      birthdayBanner.classList.remove("is-visible");
-      void birthdayBanner.offsetWidth;
-      birthdayBanner.classList.add("is-visible");
-      requestAnimationFrame(fitArcText);
-    }, 3800);
+  function openBirthdayNote() {
+    birthdayReturnFocus = document.activeElement;
+    randomizeDecorations();
+    birthdayBanner.hidden = false;
+    birthdayBanner.classList.remove("is-visible");
+    void birthdayBanner.offsetWidth;
+    birthdayBanner.classList.add("is-visible");
+    requestAnimationFrame(() => {
+      fitArcText();
+      cardPlayAgainButton.focus({ preventScroll: true });
+    });
+  }
+
+  function closeBirthdayNote(restoreFocus = true) {
+    birthdayBanner.hidden = true;
+    birthdayBanner.classList.remove("is-visible");
+    if (restoreFocus && birthdayReturnFocus instanceof HTMLElement) {
+      birthdayReturnFocus.focus({ preventScroll: true });
+    }
+    birthdayReturnFocus = null;
   }
 
   function burstConfetti() {
@@ -411,24 +443,175 @@
     });
   }
 
+  function resetScoreOverlay() {
+    scoreSubmissionInFlight = false;
+    scoreEntryPanel.hidden = false;
+    leaderboardPanel.hidden = true;
+    scoreForm.reset();
+    nameError.hidden = true;
+    nameError.textContent = "";
+    submitError.hidden = true;
+    submitScoreButton.disabled = false;
+    submitScoreButton.textContent = "Submit score";
+    leaderboardList.replaceChildren();
+    leaderboardEmpty.hidden = true;
+    gameOver.setAttribute("aria-labelledby", "gameOverTitle");
+  }
+
+  function validatePlayerName(value) {
+    const name = value.trim();
+    if (!name) {
+      return { valid: false, message: "Please enter your name." };
+    }
+    if (Array.from(name).length > MAX_NAME_LENGTH) {
+      return { valid: false, message: "Keep your name to 12 characters." };
+    }
+    if (!/^[\p{L}\p{N} .'-]+$/u.test(name) || !/[\p{L}\p{N}]/u.test(name)) {
+      return { valid: false, message: "Use letters, numbers, spaces, dots, - or '." };
+    }
+    return { valid: true, name };
+  }
+
+  function setSubmissionState(isSaving) {
+    scoreSubmissionInFlight = isSaving;
+    submitScoreButton.disabled = isSaving;
+    submitScoreButton.textContent = isSaving ? "Saving..." : "Submit score";
+  }
+
+  async function readJson(response) {
+    try {
+      return await response.json();
+    } catch {
+      return {};
+    }
+  }
+
+  async function fetchLeaderboard() {
+    const response = await fetch("/api/leaderboard", {
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+    });
+    const body = await readJson(response);
+    if (!response.ok || !Array.isArray(body.scores)) {
+      throw new Error("Leaderboard unavailable");
+    }
+    return body.scores;
+  }
+
+  function renderLeaderboard(scores) {
+    leaderboardList.replaceChildren();
+    const safeScores = scores.filter((entry) => (
+      Number.isInteger(entry?.rank)
+      && typeof entry?.name === "string"
+      && Number.isInteger(entry?.score)
+    )).slice(0, 10);
+
+    safeScores.forEach((entry) => {
+      const row = document.createElement("li");
+      row.className = "leaderboard-row";
+      const isYou = submittedEntry
+        && entry.rank === submittedEntry.rank
+        && entry.name === submittedEntry.name
+        && entry.score === submittedEntry.score;
+      if (isYou) {
+        row.classList.add("is-you");
+        row.setAttribute("aria-current", "true");
+      }
+
+      const rank = document.createElement("span");
+      rank.className = "leaderboard-rank";
+      rank.textContent = String(entry.rank).padStart(2, "0");
+
+      const name = document.createElement("span");
+      name.className = "leaderboard-name";
+      name.textContent = entry.name;
+      if (isYou) {
+        const you = document.createElement("span");
+        you.className = "leaderboard-you";
+        you.textContent = "YOU";
+        name.append(you);
+      }
+
+      const points = document.createElement("span");
+      points.className = "leaderboard-points";
+      points.textContent = String(entry.score);
+      row.append(rank, name, points);
+      leaderboardList.append(row);
+    });
+
+    leaderboardEmpty.hidden = safeScores.length !== 0;
+    yourScoreElement.textContent = String(score);
+    scoreEntryPanel.hidden = true;
+    leaderboardPanel.hidden = false;
+    gameOver.setAttribute("aria-labelledby", "leaderboardTitle");
+    playAgainButton.focus({ preventScroll: true });
+  }
+
+  async function submitScore(event) {
+    event.preventDefault();
+    if (scoreSubmissionInFlight) {
+      return;
+    }
+
+    const validation = validatePlayerName(playerNameInput.value);
+    if (!validation.valid) {
+      nameError.textContent = validation.message;
+      nameError.hidden = false;
+      playerNameInput.focus({ preventScroll: true });
+      return;
+    }
+
+    nameError.hidden = true;
+    submitError.hidden = true;
+    setSubmissionState(true);
+
+    try {
+      if (!submittedEntry) {
+        const response = await fetch("/api/score", {
+          method: "POST",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ name: validation.name, score }),
+        });
+        const body = await readJson(response);
+        if (!response.ok || !body.entry) {
+          throw new Error("Score unavailable");
+        }
+        submittedEntry = body.entry;
+      }
+
+      const scores = await fetchLeaderboard();
+      renderLeaderboard(scores);
+    } catch {
+      submitError.hidden = false;
+      setSubmissionState(false);
+      submitScoreButton.focus({ preventScroll: true });
+    }
+  }
+
   function finishGame() {
     state = "over";
     cancelAnimationFrame(animationFrame);
     movingBlock = null;
     board.classList.remove("is-playing");
     board.classList.add("is-over");
+    birthdayNoteButton.disabled = false;
 
     finalScoreElement.textContent = String(score);
+    yourScoreElement.textContent = String(score);
+    resetScoreOverlay();
 
     window.setTimeout(() => {
       gameOver.hidden = false;
-      playAgainButton.focus({ preventScroll: true });
+      playerNameInput.focus({ preventScroll: true });
     }, 430);
   }
 
   function handleBoardAction(event) {
     const target = event.target;
-    if (target?.closest("button")) {
+    if (target?.closest("button, input, form")) {
       return;
     }
     if (state === "playing") {
@@ -450,9 +633,24 @@
 
   startButton.addEventListener("click", resetGame);
   playAgainButton.addEventListener("click", resetGame);
-  cardPlayAgainButton.addEventListener("click", resetGame);
+  birthdayNoteButton.addEventListener("click", openBirthdayNote);
+  cardPlayAgainButton.addEventListener("click", () => closeBirthdayNote(true));
+  scoreForm.addEventListener("submit", submitScore);
+  playerNameInput.addEventListener("input", () => {
+    nameError.hidden = true;
+    submitError.hidden = true;
+  });
+  playerNameInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      scoreForm.requestSubmit();
+    }
+  });
   board.addEventListener("pointerdown", handleBoardAction);
   board.addEventListener("keydown", (event) => {
+    if (event.target?.closest("button, input, form")) {
+      return;
+    }
     if (!landing.hidden) {
       return;
     }
@@ -464,6 +662,12 @@
       resetGame();
     } else {
       dropBlock();
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !birthdayBanner.hidden) {
+      closeBirthdayNote(true);
     }
   });
 

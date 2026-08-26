@@ -1,0 +1,14 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "stack-it-game-dev",
+  "compatibility_date": "2026-08-26",
+  "pages_build_output_dir": ".pages-dist",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "stack-it-game-leaderboard-dev",
+      "database_id": "6960c393-79b0-44bb-a17d-9de4d146e22b",
+      "migrations_dir": "migrations"
+    }
+  ]
+}

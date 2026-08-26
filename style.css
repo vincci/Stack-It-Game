@@ -113,9 +113,16 @@
     .game-heading h1 em { display: block; font-size: 0.52em; color: var(--tomato); font-style: normal; }
     .game-heading p { margin: 0 0 2px; font-size: 0.75rem; font-weight: 800; line-height: 1.55; }
     .game-heading kbd { padding: 2px 5px; border: 1px solid rgba(255,255,255,0.55); border-radius: 3px; font: inherit; font-size: 0.65rem; }
+    .game-heading-actions { display: grid; justify-items: start; gap: 8px; }
+    .birthday-note-button {
+      min-height: 38px; border: 2px solid var(--paper-light); padding: 8px 12px; color: var(--paper-light); background: transparent;
+      border-radius: 9px; font: 800 0.66rem/1 "DM Sans", sans-serif; letter-spacing: 0.04em; text-transform: uppercase; cursor: pointer;
+    }
+    .birthday-note-button:hover { color: var(--ink); background: var(--paper-light); }
+    .birthday-note-button:disabled { cursor: default; opacity: 0.38; }
 
     .game-board {
-      position: relative; height: clamp(520px, 81vh, 720px); height: clamp(520px, 81dvh, 720px); overflow: hidden;
+      position: relative; height: clamp(520px, 81vh, 720px); height: clamp(520px, 81dvh, 720px); overflow: hidden; overflow: clip;
       touch-action: manipulation; cursor: pointer; isolation: isolate;
       background: radial-gradient(circle at 50% 45%, rgba(255,255,255,0.75), transparent 45%), linear-gradient(180deg, #f2e2cd, #e9d3b6);
     }
@@ -199,25 +206,67 @@
     }
 
     .start-screen, .game-over {
-      position: absolute; inset: 0; z-index: 12; display: grid; place-content: center; justify-items: center;
-      padding: 30px; text-align: center; background: rgba(var(--paper-light-rgb), 0.82); color: var(--ink);
+      position: absolute; inset: 0; z-index: 12;
+      padding: 30px; text-align: center; background: rgba(var(--paper-light-rgb), 0.88); color: var(--ink);
       backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
     }
+    .start-screen { display: grid; place-content: center; justify-items: center; }
+    .game-over {
+      display: flex; align-items: center; justify-content: center;
+      overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y;
+    }
     .start-screen[hidden], .game-over[hidden] { display: none; }
-    .start-screen strong, .game-over strong {
+    .start-screen strong, .score-entry > strong, .leaderboard-panel > strong {
       max-width: 650px; font-family: "Archivo Black", sans-serif;
       letter-spacing: -0.065em; line-height: 0.95; text-transform: uppercase;
     }
     .start-screen strong { font-size: clamp(2rem, 5vw, 3.2rem); }
-    .game-over strong { font-size: clamp(3.2rem, 12vw, 6.4rem); }
-    .game-over strong em { display: block; font-size: 0.3em; letter-spacing: -0.02em; font-style: normal; margin-top: 4px; }
-    .start-screen small, .game-over p { max-width: 460px; margin: 12px 0 18px; font-size: 0.78rem; font-weight: 700; }
+    .score-entry > strong, .leaderboard-panel > strong { font-size: clamp(2rem, 8vw, 3.6rem); }
+    .start-screen small { max-width: 460px; margin: 12px 0 18px; font-size: 0.78rem; font-weight: 700; }
     .start-screen button, .game-over button {
-      border: 0; padding: 13px 20px; color: var(--paper-light); background: var(--ink); box-shadow: 4px 4px 0 var(--tomato); border-radius: 10px;
+      min-height: 46px; border: 0; padding: 13px 20px; color: var(--paper-light); background: var(--ink); box-shadow: 4px 4px 0 var(--tomato); border-radius: 10px;
       font: 800 0.75rem/1 "DM Sans", sans-serif; text-transform: uppercase; cursor: pointer;
       transition: transform 140ms ease, box-shadow 140ms ease;
     }
     .start-screen button:hover, .game-over button:hover { transform: translate(2px, 2px); box-shadow: 2px 2px 0 var(--tomato); }
+    .game-over button:disabled { cursor: wait; opacity: 0.68; transform: none; box-shadow: 4px 4px 0 var(--tomato); }
+
+    .score-entry, .leaderboard-panel { width: min(100%, 430px); display: grid; justify-items: center; }
+    .score-entry[hidden], .leaderboard-panel[hidden] { display: none; }
+    .final-score { display: grid; justify-items: center; margin: 8px 0 18px; text-transform: uppercase; }
+    .final-score b { color: var(--tomato); font: 900 clamp(4.8rem, 18vw, 7rem)/0.88 "Archivo Black", sans-serif; }
+    .final-score span { margin-top: 8px; font: 900 0.82rem/1 "DM Sans", sans-serif; letter-spacing: 0.16em; }
+
+    .score-form { width: min(100%, 330px); display: grid; justify-items: stretch; gap: 8px; }
+    .score-form label { font: 900 0.82rem/1 "DM Sans", sans-serif; letter-spacing: 0.08em; text-transform: uppercase; }
+    .score-form input {
+      width: 100%; min-height: 48px; border: 3px solid var(--ink); padding: 9px 12px; color: var(--ink); background: var(--paper-light);
+      border-radius: 9px; box-shadow: 4px 4px 0 var(--tomato); font: 800 1rem/1.2 "DM Sans", sans-serif; text-align: center;
+    }
+    .score-form input:focus { outline: 3px solid var(--sky); outline-offset: 3px; }
+    .score-form small { margin: 0 0 4px; color: rgba(var(--ink-rgb), 0.68); font: 700 0.66rem/1.2 "DM Sans", sans-serif; }
+    .validation-message { margin: 0; color: #9d2d19; font: 800 0.7rem/1.25 "DM Sans", sans-serif; }
+    .validation-message[hidden], .submit-error[hidden] { display: none; }
+    .submit-error { display: grid; gap: 2px; margin-top: 6px; color: #9d2d19; }
+    .submit-error b { font: 900 0.72rem/1.2 "DM Sans", sans-serif; text-transform: uppercase; }
+    .submit-error span { font: 700 0.68rem/1.2 "DM Sans", sans-serif; }
+
+    .leaderboard-list { width: 100%; margin: 18px 0 16px; padding: 0; list-style: none; display: grid; gap: 6px; }
+    .leaderboard-row {
+      display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; align-items: center; gap: 9px;
+      min-height: 38px; border: 2px solid var(--ink); padding: 6px 10px; background: var(--paper-light); border-radius: 8px;
+      box-shadow: 3px 3px 0 rgba(var(--ink-rgb), 0.18); font: 800 0.78rem/1.1 "DM Sans", sans-serif;
+    }
+    .leaderboard-row.is-you { background: var(--tomato); box-shadow: 3px 3px 0 var(--ink); }
+    .leaderboard-rank { color: rgba(var(--ink-rgb), 0.68); font-size: 0.68rem; letter-spacing: 0.06em; }
+    .leaderboard-name { overflow: hidden; text-align: left; text-overflow: ellipsis; white-space: nowrap; text-transform: uppercase; }
+    .leaderboard-points { font-family: "Archivo Black", sans-serif; font-size: 0.9rem; }
+    .leaderboard-you { margin-left: 5px; font-size: 0.56rem; letter-spacing: 0.05em; }
+    .leaderboard-empty { margin: 18px 0; font-size: 0.78rem; font-weight: 800; }
+    .leaderboard-empty[hidden] { display: none; }
+    .your-score { display: grid; justify-items: center; margin: 0 0 15px; text-transform: uppercase; }
+    .your-score span { font: 900 0.68rem/1 "DM Sans", sans-serif; letter-spacing: 0.13em; }
+    .your-score b { color: var(--tomato); font: 900 2.8rem/1 "Archivo Black", sans-serif; }
 
     .start-icon { position: relative; width: 84px; height: 54px; margin-bottom: 22px; }
     .start-icon i {
@@ -228,8 +277,6 @@
     .start-icon i:nth-child(2) { right: 2px; top: 0; background: var(--sky); transform: rotate(7deg); }
     .start-icon i:nth-child(3) { left: 11px; bottom: 0; background: var(--mint); transform: rotate(5deg); }
     .start-icon i:nth-child(4) { right: 9px; bottom: 2px; background: var(--tomato); transform: rotate(-5deg); }
-
-    .game-over b { color: var(--tomato); }
 
     .perfect-callout {
       position: fixed; left: 50%; top: 50%; z-index: 58;
@@ -315,7 +362,7 @@
       .game-card { padding: 20px; border-width: 7px; }
       .game-heading { grid-template-columns: 1fr; gap: 4px; }
       .game-heading p { max-width: 320px; }
-      .game-board { height: min(86vh, 675px); height: min(86dvh, 675px); min-height: 520px; }
+      .game-board { height: clamp(520px, calc(100vh - 190px), 675px); height: clamp(520px, calc(100dvh - 190px), 675px); }
       .height-markers { display: none; }
     }
 
@@ -323,6 +370,20 @@
       .game-shell { width: calc(100% - 14px); }
       .game-card { padding: 14px; }
       .game-heading h1 { font-size: 2rem; }
+      .game-over { align-items: flex-start; padding: max(22px, env(safe-area-inset-top, 0px)) 16px max(22px, env(safe-area-inset-bottom, 0px)); }
+      .score-entry, .leaderboard-panel { margin: auto 0; }
+      .score-entry > strong, .leaderboard-panel > strong { font-size: 2rem; }
+      .final-score b { font-size: 4.8rem; }
+      .leaderboard-list { margin: 12px 0; gap: 5px; }
+      .leaderboard-row { min-height: 34px; padding: 5px 8px; }
+    }
+
+    @media (max-height: 620px) {
+      .game-over { align-items: flex-start; }
+      .score-entry, .leaderboard-panel { margin: auto 0; }
+      .leaderboard-row { min-height: 32px; padding-block: 4px; }
+      .leaderboard-list { margin-block: 10px; gap: 4px; }
+      .your-score { margin-bottom: 10px; }
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -333,4 +394,3 @@
         transition-duration: 0.01ms !important;
       }
     }
-  
