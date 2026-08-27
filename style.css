@@ -273,25 +273,23 @@
     .your-score span { font: 900 0.68rem/1 "DM Sans", sans-serif; letter-spacing: 0.13em; }
     .your-score b { color: var(--tomato); font: 900 2.8rem/1 "Archivo Black", sans-serif; }
 
-    .star-celebration { position: absolute; inset: 0; z-index: 20; overflow: hidden; pointer-events: none; }
-    .star-celebration[hidden] { display: none; }
-    .star-celebration span {
-      --burst-x: 0px; --burst-y: -180px;
-      position: absolute; left: 50%; top: 54%; opacity: 0; font-size: clamp(2.8rem, 9vw, 5.2rem); line-height: 1;
-      transform: translate(-50%, -50%) scale(0.2) rotate(-16deg);
+    .face-celebration { position: absolute; inset: 0; z-index: 20; overflow: hidden; pointer-events: none; }
+    .face-celebration[hidden] { display: none; }
+    .face-particle {
+      position: absolute; left: var(--face-x); top: var(--face-y); width: var(--face-size); height: auto; opacity: 0;
+      object-fit: contain; pointer-events: none; transform: translate(-50%, -50%) scale(0.28) rotate(var(--face-start-rotation));
+      will-change: opacity, transform;
     }
-    .star-celebration span:nth-child(1) { --burst-x: -250px; --burst-y: -210px; }
-    .star-celebration span:nth-child(2) { --burst-x: -130px; --burst-y: -300px; }
-    .star-celebration span:nth-child(3) { --burst-x: 0px; --burst-y: -340px; }
-    .star-celebration span:nth-child(4) { --burst-x: 145px; --burst-y: -285px; }
-    .star-celebration span:nth-child(5) { --burst-x: 255px; --burst-y: -195px; }
-    .star-celebration.is-visible span { animation: star-burst 1.35s cubic-bezier(0.18, 0.78, 0.24, 1) forwards; }
-    .star-celebration.is-visible span:nth-child(2), .star-celebration.is-visible span:nth-child(4) { animation-delay: 80ms; }
-    @keyframes star-burst {
-      0% { opacity: 0; transform: translate(-50%, -50%) scale(0.2) rotate(-16deg); }
-      22% { opacity: 1; }
-      68% { opacity: 1; }
-      100% { opacity: 0; transform: translate(calc(-50% + var(--burst-x)), calc(-50% + var(--burst-y))) scale(1.12) rotate(18deg); }
+    .face-particle:not(.is-active) { display: none; }
+    .face-celebration.is-visible .face-particle.is-active {
+      animation: face-burst var(--face-duration) cubic-bezier(0.16, 0.76, 0.34, 1) var(--face-delay) forwards;
+    }
+    @keyframes face-burst {
+      0% { opacity: 0; transform: translate(-50%, -50%) scale(0.28) rotate(var(--face-start-rotation)); }
+      12% { opacity: 1; transform: translate(-50%, -50%) translate(0, -10px) scale(var(--face-scale)) rotate(var(--face-start-rotation)); }
+      48% { opacity: 1; transform: translate(-50%, -50%) translate(var(--face-mid-x), var(--face-mid-y)) scale(var(--face-scale)) rotate(calc(var(--face-start-rotation) + 18deg)); }
+      80% { opacity: 0.88; transform: translate(-50%, -50%) translate(var(--face-late-x), var(--face-late-y)) scale(var(--face-scale)) rotate(var(--face-end-rotation)); }
+      100% { opacity: 0; transform: translate(-50%, -50%) translate(var(--face-end-x), var(--face-end-y)) scale(var(--face-scale)) rotate(var(--face-end-rotation)); }
     }
     @keyframes emoji-bob { 0%, 100% { transform: translateY(0) rotate(-3deg); } 50% { transform: translateY(-7px) rotate(3deg); } }
 

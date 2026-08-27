@@ -37,11 +37,19 @@ import {
   const submitError = requireElement("submitError");
   const submitScoreButton = requireElement("submitScoreButton");
   const perfectCallout = requireElement("perfectCallout");
-  const starCelebration = requireElement("starCelebration");
+  const faceCelebration = requireElement("faceCelebration");
   const landing = requireElement("landing");
   const landingButton = requireElement("landingButton");
 
   const tones = ["tomato", "mustard", "mint", "sky", "lilac", "cream"];
+  const FACE_PARTICLE_COUNT = 30;
+  const FACE_CELEBRATION_DURATION = 1800;
+  const FACE_ASSETS = Array.from(
+    { length: 8 },
+    (_, index) => `./assets/darren-faces/face-${index + 1}.webp`,
+  );
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+  const faceParticles = [];
 
   let state = "idle";
   let tower = [];
@@ -136,8 +144,7 @@ import {
     gameOver.hidden = true;
     startScreen.hidden = true;
     perfectCallout.classList.remove("is-visible");
-    starCelebration.hidden = true;
-    starCelebration.classList.remove("is-visible");
+    clearFaceCelebration();
     resetScoreOverlay();
     stackLayer.replaceChildren();
     board.classList.remove("is-over", "is-perfect", "is-complete");
@@ -284,7 +291,10 @@ import {
       board.classList.add("is-complete");
       cancelAnimationFrame(animationFrame);
       celebrateCompletion();
-      completionTimer = window.setTimeout(() => finishGame("complete"), 1400);
+      completionTimer = window.setTimeout(
+        () => finishGame("complete", 0),
+        reducedMotion.matches ? 650 : FACE_CELEBRATION_DURATION,
+      );
       return;
     }
 
@@ -383,11 +393,94 @@ import {
     }, 180);
   }
 
+  function createFaceParticles() {
+    if (faceParticles.length) {
+      return;
+    }
+
+    const fragment = document.createDocumentFragment();
+    for (let index = 0; index < FACE_PARTICLE_COUNT; index += 1) {
+      const particle = document.createElement("img");
+      particle.className = "face-particle";
+      particle.alt = "";
+      particle.decoding = "async";
+      particle.draggable = false;
+      faceParticles.push(particle);
+      fragment.append(particle);
+    }
+    faceCelebration.append(fragment);
+  }
+
+  function clearFaceCelebration() {
+    faceCelebration.hidden = true;
+    faceCelebration.classList.remove("is-visible", "is-reduced");
+    faceParticles.forEach((particle) => particle.classList.remove("is-active"));
+  }
+
+  function randomBetween(minimum, maximum) {
+    return minimum + Math.random() * (maximum - minimum);
+  }
+
   function celebrateCompletion() {
-    starCelebration.hidden = false;
-    starCelebration.classList.remove("is-visible");
-    void starCelebration.offsetWidth;
-    starCelebration.classList.add("is-visible");
+    createFaceParticles();
+    clearFaceCelebration();
+
+    const size = boardSize();
+    const isReduced = reducedMotion.matches;
+    const particleCount = isReduced ? 0 : FACE_PARTICLE_COUNT;
+    const origins = [
+      { x: size.width * 0.02, y: size.height * 0.02, angle: [20, 70] },
+      { x: size.width * 0.98, y: size.height * 0.02, angle: [110, 160] },
+      { x: size.width * 0.02, y: size.height * 0.5, angle: [-35, 35] },
+      { x: size.width * 0.98, y: size.height * 0.5, angle: [145, 215] },
+      { x: size.width * 0.02, y: size.height * 0.98, angle: [-70, -20] },
+      { x: size.width * 0.98, y: size.height * 0.98, angle: [-160, -110] },
+    ];
+
+    faceParticles.forEach((particle, index) => {
+      if (index >= particleCount) {
+        return;
+      }
+
+      const origin = origins[index % origins.length];
+      const originParticleIndex = Math.floor(index / origins.length);
+      const particlesPerOrigin = Math.ceil(particleCount / origins.length);
+      const angleProgress = (originParticleIndex + randomBetween(0.12, 0.88)) / particlesPerOrigin;
+      const angle = (
+        origin.angle[0] + (origin.angle[1] - origin.angle[0]) * angleProgress
+      ) * (Math.PI / 180);
+      const launchDistance = randomBetween(size.width * 0.24, size.width * 0.42);
+      const launchX = Math.cos(angle) * launchDistance;
+      const launchY = Math.sin(angle) * launchDistance;
+      const gravityY = randomBetween(size.height * 0.26, size.height * 0.5);
+      const startRotation = randomBetween(-25, 25);
+      const endRotation = startRotation + randomBetween(-80, 80);
+      const faceSize = randomBetween(54 * 1.2, Math.min(114, size.width * 0.21) * 1.2);
+
+      particle.src = FACE_ASSETS[Math.floor(Math.random() * FACE_ASSETS.length)];
+      particle.style.setProperty("--face-x", `${origin.x + randomBetween(-18, 18)}px`);
+      particle.style.setProperty("--face-y", `${origin.y + randomBetween(-18, 18)}px`);
+      particle.style.setProperty("--face-size", `${faceSize}px`);
+      particle.style.setProperty("--face-mid-x", `${launchX * 0.55}px`);
+      particle.style.setProperty("--face-mid-y", `${launchY * 0.55}px`);
+      particle.style.setProperty("--face-late-x", `${launchX * 0.86}px`);
+      particle.style.setProperty("--face-late-y", `${launchY * 0.86 + gravityY * 0.45}px`);
+      particle.style.setProperty("--face-end-x", `${launchX * 1.08}px`);
+      particle.style.setProperty("--face-end-y", `${launchY * 1.08 + gravityY}px`);
+      particle.style.setProperty("--face-start-rotation", `${startRotation}deg`);
+      particle.style.setProperty("--face-end-rotation", `${endRotation}deg`);
+      particle.style.setProperty("--face-scale", String(randomBetween(0.5, 1.2)));
+      particle.style.setProperty("--face-delay", `${isReduced ? 0 : randomBetween(0, 160)}ms`);
+      particle.style.setProperty("--face-duration", `${randomBetween(1180, 1370)}ms`);
+      particle.classList.add("is-active");
+    });
+
+    faceCelebration.hidden = false;
+    void faceCelebration.offsetWidth;
+    faceCelebration.classList.add("is-visible");
+    if (isReduced) {
+      faceCelebration.classList.add("is-reduced");
+    }
   }
 
   function resetScoreOverlay() {
@@ -549,7 +642,7 @@ import {
     }
   }
 
-  function finishGame(result) {
+  function finishGame(result, revealDelay = 430) {
     state = "over";
     cancelAnimationFrame(animationFrame);
     movingBlock = null;
@@ -560,13 +653,12 @@ import {
     resetScoreOverlay();
 
     window.setTimeout(() => {
-      gameOver.hidden = false;
-      if (result !== "complete") {
-        starCelebration.hidden = true;
-        starCelebration.classList.remove("is-visible");
+      if (result === "complete") {
+        clearFaceCelebration();
       }
+      gameOver.hidden = false;
       chooseSubmitButton.focus({ preventScroll: true });
-    }, 430);
+    }, revealDelay);
   }
 
   function handleBoardAction(event) {
