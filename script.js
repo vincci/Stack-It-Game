@@ -66,6 +66,7 @@ import {
   let completionTimer = 0;
   let scoreSubmissionInFlight = false;
   let submittedEntry = null;
+  let landingDismissed = false;
 
   function requireElement(id) {
     const element = document.getElementById(id);
@@ -671,7 +672,12 @@ import {
     }
   }
 
-  landingButton.addEventListener("click", () => {
+  function revealGame() {
+    if (landingDismissed) {
+      return;
+    }
+
+    landingDismissed = true;
     if (document.documentElement.requestFullscreen) {
       document.documentElement.requestFullscreen().catch(() => {});
     }
@@ -681,6 +687,14 @@ import {
     window.setTimeout(() => {
       landing.hidden = true;
     }, 760);
+  }
+
+  landingButton.addEventListener("click", revealGame);
+  landingButton.addEventListener("pointerup", (event) => {
+    if (event.pointerType === "touch") {
+      event.preventDefault();
+      revealGame();
+    }
   });
 
   startButton.addEventListener("click", resetGame);
