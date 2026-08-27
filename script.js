@@ -1,17 +1,27 @@
+import {
+  INITIAL_SCORE,
+  INITIAL_SECTIONS,
+  MAX_SCORE,
+  TOTAL_STACKS,
+  pointsForSections,
+  sectionsFromOverlap,
+} from "./game-rules.js";
+
   const BLOCK_HEIGHT = 34;
   const BASE_WIDTH = 240;
+  const SECTION_WIDTH = BASE_WIDTH / INITIAL_SECTIONS;
   const PERFECT_MARGIN = 5;
   const START_SPEED = 190;
   const MAX_SPEED = 420;
-  const BIRTHDAY_HEIGHT = 13;
-  const MAX_SHRINK = 0.2;
   const SPEED_GROWTH = 1.15;
-  const CANDLE_SCALE = 1.2;
-  const CANDLE_FIXED_WIDTH = BASE_WIDTH / 20;
   const MAX_NAME_LENGTH = 12;
 
   const board = requireElement("gameBoard");
   const stackLayer = requireElement("stackLayer");
+  const gameHud = requireElement("gameHud");
+  const hudStack = requireElement("hudStack");
+  const hudScore = requireElement("hudScore");
+  const hudSections = requireElement("hudSections");
   const startScreen = requireElement("startScreen");
   const startButton = requireElement("startButton");
   const gameOver = requireElement("gameOver");
@@ -19,6 +29,9 @@
   const finalScoreElement = requireElement("finalScore");
   const yourScoreElement = requireElement("yourScore");
   const scoreEntryPanel = requireElement("scoreEntryPanel");
+  const resultChoicePanel = requireElement("resultChoicePanel");
+  const chooseSubmitButton = requireElement("chooseSubmitButton");
+  const resultPlayAgainButton = requireElement("resultPlayAgainButton");
   const leaderboardPanel = requireElement("leaderboardPanel");
   const leaderboardList = requireElement("leaderboardList");
   const leaderboardEmpty = requireElement("leaderboardEmpty");
@@ -28,6 +41,7 @@
   const submitError = requireElement("submitError");
   const submitScoreButton = requireElement("submitScoreButton");
   const perfectCallout = requireElement("perfectCallout");
+  const starCelebration = requireElement("starCelebration");
   const birthdayBanner = requireElement("birthdayBanner");
   const birthdayNoteButton = requireElement("birthdayNoteButton");
   const landing = requireElement("landing");
@@ -35,25 +49,20 @@
   const cardPlayAgainButton = requireElement("cardPlayAgain");
 
   const tones = ["tomato", "mustard", "mint", "sky", "lilac", "cream"];
-  const jsConfetti = typeof JSConfetti === "function"
-    ? new JSConfetti()
-    : { clearCanvas() {}, addConfettiAtPosition() {} };
-  const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   let state = "idle";
   let tower = [];
   let movingBlock = null;
-  let score = 0;
+  let score = INITIAL_SCORE;
+  let stackCount = 1;
+  let currentSections = INITIAL_SECTIONS;
   let direction = 1;
   let speed = START_SPEED;
   let lastFrameTime = 0;
   let animationFrame = 0;
   let perfectTimer = 0;
   let perfectPauseTimer = 0;
-  let confettiTimer = 0;
-  let flameTimer = 0;
   let completionTimer = 0;
-  let hasCompletedTower = false;
   let scoreSubmissionInFlight = false;
   let submittedEntry = null;
   let birthdayReturnFocus = null;
@@ -71,30 +80,35 @@
     return { width: rect.width, height: rect.height };
   }
 
-  function createBlock(x, y, width, tone, className = "tower-block", height = BLOCK_HEIGHT) {
+  function createBlock(
+    x,
+    y,
+    width,
+    tone,
+    className = "tower-block",
+    height = BLOCK_HEIGHT,
+    sections = Math.max(1, Math.round(width / SECTION_WIDTH)),
+  ) {
     const element = document.createElement("div");
     element.className = className;
     element.dataset.tone = tone;
+    element.dataset.sections = String(sections);
     element.style.width = `${width}px`;
     element.style.height = `${height}px`;
     element.style.setProperty("--bx", `${x}px`);
     element.style.setProperty("--by", `${y}px`);
 
     const studs = document.createElement("span");
-    if (className.includes("is-candle")) {
-      studs.className = "candle-flame";
-    } else {
-      studs.className = "block-studs";
-      const studCount = Math.max(2, Math.floor(width / 44));
-      for (let index = 0; index < studCount; index += 1) {
-        studs.append(document.createElement("i"));
-      }
+    studs.className = "block-studs";
+    const studCount = Math.max(1, Math.floor(width / 44));
+    for (let index = 0; index < studCount; index += 1) {
+      studs.append(document.createElement("i"));
     }
 
     element.append(studs);
     stackLayer.append(element);
 
-    return { element, x, y, width, height };
+    return { element, x, y, width, height, sections };
   }
 
   function positionBlock(block) {
@@ -103,31 +117,42 @@
     block.element.style.setProperty("--by", `${block.y}px`);
   }
 
+  function syncGameState() {
+    board.dataset.score = String(score);
+    board.dataset.stackCount = String(stackCount);
+    board.dataset.currentSections = String(currentSections);
+    hudStack.textContent = `${stackCount}/${TOTAL_STACKS}`;
+    hudScore.textContent = String(score);
+    hudSections.textContent = String(currentSections);
+  }
+
   function resetGame() {
     cancelAnimationFrame(animationFrame);
     window.clearTimeout(perfectTimer);
     window.clearTimeout(perfectPauseTimer);
-    window.clearTimeout(confettiTimer);
-    window.clearTimeout(flameTimer);
     window.clearTimeout(completionTimer);
 
     state = "playing";
-    score = 0;
+    score = INITIAL_SCORE;
+    stackCount = 1;
+    currentSections = INITIAL_SECTIONS;
     speed = START_SPEED;
     direction = Math.random() > 0.5 ? 1 : -1;
     lastFrameTime = 0;
     movingBlock = null;
     tower = [];
-    hasCompletedTower = false;
     submittedEntry = null;
+    syncGameState();
 
     gameOver.hidden = true;
     startScreen.hidden = true;
+    gameHud.hidden = false;
     birthdayNoteButton.disabled = true;
     perfectCallout.classList.remove("is-visible");
+    starCelebration.hidden = true;
+    starCelebration.classList.remove("is-visible");
     closeBirthdayNote(false);
     resetScoreOverlay();
-    jsConfetti.clearCanvas();
     stackLayer.replaceChildren();
     board.classList.remove("is-over", "is-perfect", "is-complete");
     board.classList.add("is-playing");
@@ -135,7 +160,15 @@
     const size = boardSize();
     const baseY = size.height - BLOCK_HEIGHT - 34;
     const baseX = (size.width - BASE_WIDTH) / 2;
-    const base = createBlock(baseX, baseY, BASE_WIDTH, "cream", "tower-block is-base");
+    const base = createBlock(
+      baseX,
+      baseY,
+      BASE_WIDTH,
+      "cream",
+      "tower-block is-base",
+      BLOCK_HEIGHT,
+      INITIAL_SECTIONS,
+    );
 
     tower.push(base);
     spawnMovingBlock();
@@ -146,16 +179,21 @@
   function spawnMovingBlock() {
     const previous = tower[tower.length - 1];
     const size = boardSize();
-    const isFinalTier = score + 1 === BIRTHDAY_HEIGHT;
-    const width = isFinalTier ? CANDLE_FIXED_WIDTH : previous.width;
-    const tierHeight = isFinalTier ? BLOCK_HEIGHT * CANDLE_SCALE : BLOCK_HEIGHT;
-    const y = previous.y - tierHeight;
+    const width = currentSections * SECTION_WIDTH;
+    const y = previous.y - BLOCK_HEIGHT;
     const entersFromLeft = direction > 0;
     const x = entersFromLeft ? -width : size.width;
-    const tone = isFinalTier ? "candle" : tones[score % tones.length];
-    const className = isFinalTier ? "tower-block is-moving is-candle" : "tower-block is-moving";
+    const tone = tones[(stackCount - 1) % tones.length];
 
-    movingBlock = createBlock(x, y, width, tone, className, tierHeight);
+    movingBlock = createBlock(
+      x,
+      y,
+      width,
+      tone,
+      "tower-block is-moving",
+      BLOCK_HEIGHT,
+      currentSections,
+    );
   }
 
   function animate(time) {
@@ -197,43 +235,44 @@
     let overlapStart = Math.max(current.x, previous.x);
     let overlapEnd = Math.min(currentRight, previousRight);
     const rawOverlap = overlapEnd - overlapStart;
-    let overlap = rawOverlap;
 
     if (rawOverlap <= 0) {
       dropMissedBlock(current);
-      finishGame();
+      finishGame("miss");
       return;
     }
 
     const offset = current.x - previous.x;
     const isPerfect = Math.abs(offset) <= PERFECT_MARGIN;
+    let overlapSections;
+    let overlap;
 
     if (isPerfect) {
       overlapStart = previous.x;
       overlapEnd = previousRight;
       overlap = previous.width;
+      overlapSections = currentSections;
     } else {
-      const minWidth = previous.width * (1 - MAX_SHRINK);
-      if (rawOverlap < minWidth) {
-        const center = (overlapStart + overlapEnd) / 2;
-        let clampedStart = center - minWidth / 2;
-        let clampedEnd = center + minWidth / 2;
-        if (clampedStart < previous.x) {
-          clampedStart = previous.x;
-          clampedEnd = clampedStart + minWidth;
-        } else if (clampedEnd > previousRight) {
-          clampedEnd = previousRight;
-          clampedStart = clampedEnd - minWidth;
-        }
-        overlapStart = Math.max(clampedStart, current.x);
-        overlapEnd = Math.min(clampedEnd, current.x + current.width);
-        overlap = overlapEnd - overlapStart;
+      overlapSections = sectionsFromOverlap(rawOverlap, SECTION_WIDTH, currentSections);
+      if (overlapSections === 0) {
+        dropMissedBlock(current);
+        finishGame("miss");
+        return;
+      }
+
+      overlap = overlapSections * SECTION_WIDTH;
+      if (current.x < previous.x) {
+        overlapStart = overlapEnd - overlap;
+      } else {
+        overlapEnd = overlapStart + overlap;
       }
       createTrimmedPiece(current, overlapStart, overlapEnd);
     }
 
     current.x = overlapStart;
     current.width = overlap;
+    current.sections = overlapSections;
+    current.element.dataset.sections = String(overlapSections);
     current.element.classList.remove("is-moving");
     current.element.classList.add("is-placed");
     positionBlock(current);
@@ -244,17 +283,22 @@
 
     tower.push(current);
     movingBlock = null;
-    score += 1;
+    score += pointsForSections(overlapSections);
+    currentSections = overlapSections;
+    stackCount += 1;
+    if (score > MAX_SCORE) {
+      throw new Error("Score exceeded the configured maximum.");
+    }
+    syncGameState();
     speed = Math.min(MAX_SPEED, speed * SPEED_GROWTH);
 
-    if (!hasCompletedTower && score >= BIRTHDAY_HEIGHT) {
-      hasCompletedTower = true;
+    if (stackCount >= TOTAL_STACKS) {
       state = "complete";
       board.classList.remove("is-playing");
       board.classList.add("is-complete");
       cancelAnimationFrame(animationFrame);
-      celebrateTower(current.element);
-      completionTimer = window.setTimeout(finishGame, 1900);
+      celebrateCompletion();
+      completionTimer = window.setTimeout(() => finishGame("complete"), 1400);
       return;
     }
 
@@ -381,19 +425,11 @@
     });
   }
 
-  function celebrateTower(candleElement) {
-    window.clearTimeout(flameTimer);
-    flameTimer = window.setTimeout(() => {
-      const flame = candleElement.querySelector(".candle-flame");
-      if (flame) {
-        flame.classList.add("is-lit");
-      }
-    }, 600);
-
-    window.clearTimeout(confettiTimer);
-    confettiTimer = window.setTimeout(() => {
-      burstConfetti();
-    }, 1200);
+  function celebrateCompletion() {
+    starCelebration.hidden = false;
+    starCelebration.classList.remove("is-visible");
+    void starCelebration.offsetWidth;
+    starCelebration.classList.add("is-visible");
   }
 
   function openBirthdayNote() {
@@ -418,34 +454,11 @@
     birthdayReturnFocus = null;
   }
 
-  function burstConfetti() {
-    if (prefersReducedMotion) {
-      return;
-    }
-
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
-    const origins = [
-      { x: vw * 0.02, y: vh * 0.02 },
-      { x: vw * 0.98, y: vh * 0.02 },
-      { x: vw * 0.02, y: vh * 0.5 },
-      { x: vw * 0.98, y: vh * 0.5 },
-      { x: vw * 0.02, y: vh * 0.98 },
-      { x: vw * 0.98, y: vh * 0.98 },
-    ];
-
-    origins.forEach((origin) => {
-      jsConfetti.addConfettiAtPosition({
-        confettiDispatchPosition: { x: origin.x, y: origin.y },
-        emojis: ["🎁"],
-        confettiNumber: 60,
-      });
-    });
-  }
-
   function resetScoreOverlay() {
     scoreSubmissionInFlight = false;
     scoreEntryPanel.hidden = false;
+    resultChoicePanel.hidden = false;
+    scoreForm.hidden = true;
     leaderboardPanel.hidden = true;
     scoreForm.reset();
     nameError.hidden = true;
@@ -456,6 +469,15 @@
     leaderboardList.replaceChildren();
     leaderboardEmpty.hidden = true;
     gameOver.setAttribute("aria-labelledby", "gameOverTitle");
+  }
+
+  function showNameEntry() {
+    resultChoicePanel.hidden = true;
+    scoreForm.hidden = false;
+    gameOver.setAttribute("aria-labelledby", "nameEntryTitle");
+    requestAnimationFrame(() => {
+      playerNameInput.focus({ preventScroll: true });
+    });
   }
 
   function validatePlayerName(value) {
@@ -591,7 +613,7 @@
     }
   }
 
-  function finishGame() {
+  function finishGame(result) {
     state = "over";
     cancelAnimationFrame(animationFrame);
     movingBlock = null;
@@ -605,7 +627,11 @@
 
     window.setTimeout(() => {
       gameOver.hidden = false;
-      playerNameInput.focus({ preventScroll: true });
+      if (result !== "complete") {
+        starCelebration.hidden = true;
+        starCelebration.classList.remove("is-visible");
+      }
+      chooseSubmitButton.focus({ preventScroll: true });
     }, 430);
   }
 
@@ -633,6 +659,8 @@
 
   startButton.addEventListener("click", resetGame);
   playAgainButton.addEventListener("click", resetGame);
+  resultPlayAgainButton.addEventListener("click", resetGame);
+  chooseSubmitButton.addEventListener("click", showNameEntry);
   birthdayNoteButton.addEventListener("click", openBirthdayNote);
   cardPlayAgainButton.addEventListener("click", () => closeBirthdayNote(true));
   scoreForm.addEventListener("submit", submitScore);
@@ -658,9 +686,9 @@
       return;
     }
     event.preventDefault();
-    if (state === "idle" || state === "over") {
+    if (state === "idle") {
       resetGame();
-    } else {
+    } else if (state === "playing") {
       dropBlock();
     }
   });

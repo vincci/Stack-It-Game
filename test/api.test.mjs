@@ -106,9 +106,9 @@ async function withSuppressedConsoleError(callback) {
 
 test("POST /api/score accepts a valid payload and trims the name", async () => {
   const database = new FakeD1();
-  const response = await submit(database, "  Vincent  ", 13);
+  const response = await submit(database, "  Vincent  ", 2250);
   assert.equal(response.status, 201);
-  assert.deepEqual(await response.json(), { entry: { rank: 1, name: "Vincent", score: 13 } });
+  assert.deepEqual(await response.json(), { entry: { rank: 1, name: "Vincent", score: 2250 } });
   assert.deepEqual(database.rows[0].name, "Vincent");
   assert.equal(response.headers.get("Cache-Control"), "no-store");
 });
@@ -130,9 +130,20 @@ test("POST /api/score rejects invalid names", async () => {
 });
 
 test("POST /api/score rejects invalid scores", async () => {
-  for (const score of [-1, 1.5, 14, 999999, "3", null]) {
+  for (const score of [-1, 1.5, 2251, 999999999, "3", null]) {
     const response = await submit(new FakeD1(), "Vincent", score);
     assert.equal(response.status, 400, String(score));
+  }
+});
+
+test("POST /api/score rejects non-JSON numeric values", async () => {
+  for (const body of [
+    '{"name":"Vincent","score":NaN}',
+    '{"name":"Vincent","score":Infinity}',
+  ]) {
+    const { context } = scoreRequest(body);
+    const response = await postScore(context);
+    assert.equal(response.status, 400);
   }
 });
 

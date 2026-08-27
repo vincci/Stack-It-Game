@@ -1,5 +1,5 @@
 const MAX_NAME_LENGTH = 12;
-const MAX_SCORE = 13;
+const MAX_SCORE = 2250;
 const NAME_PATTERN = /^[\p{L}\p{N} .'-]+$/u;
 
 function json(payload, status = 200) {

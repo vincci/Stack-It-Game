@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="description" content="A stacking game built for Derren's birthday.">
-  <title>Happy Birthday, Derren — Stack It Up</title>
+  <meta name="description" content="Stack It Higher — a colourful public stacking game.">
+  <title>Stack It Higher</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Baloo+2:wght@700;800&family=Bitcount+Grid+Single&family=DM+Sans:wght@500;600;700;800&family=Honk&display=swap" rel="stylesheet">
@@ -12,7 +12,7 @@
 </head>
 <body>
   <div class="landing" id="landing">
-    <h1>Hello,<br>Derren</h1>
+    <h1>Hello,<br>Darren</h1>
     <button id="landingButton" class="landing-text-btn" type="button">
       <span class="btn-primary">Let's Play A Game</span>
       <span class="btn-secondary">Tap To Begin</span>
@@ -100,6 +100,11 @@
           <span>Getting ambitious</span>
           <span>Insurance concern</span>
         </div>
+        <div class="game-hud" id="gameHud" hidden aria-live="polite" aria-atomic="true">
+          <span>Stack <b id="hudStack">1/15</b></span>
+          <span><b id="hudScore">150</b> pts</span>
+          <span><b id="hudSections">15</b> sections</span>
+        </div>
         <div class="stack-layer" id="stackLayer" aria-hidden="true"></div>
         <div class="floor" aria-hidden="true"></div>
         <div class="start-screen" id="startScreen">
@@ -112,13 +117,22 @@
         </div>
         <div class="game-over" id="gameOver" hidden role="dialog" aria-modal="true" aria-labelledby="gameOverTitle">
           <div class="score-entry" id="scoreEntryPanel">
-            <strong id="gameOverTitle">You made it!</strong>
-            <div class="final-score" aria-label="Your final score">
-              <b id="finalScore">0</b>
-              <span>Points</span>
+            <div class="result-choice" id="resultChoicePanel">
+              <span class="completion-emoji" aria-hidden="true">🤩</span>
+              <strong id="gameOverTitle">Leave your score?</strong>
+              <div class="final-score" aria-label="Your final score">
+                <b id="finalScore">150</b>
+                <span>Points</span>
+              </div>
+              <div class="result-actions">
+                <button id="chooseSubmitButton" type="button">Submit score</button>
+                <button id="resultPlayAgainButton" type="button">Play again</button>
+              </div>
             </div>
-            <form class="score-form" id="scoreForm" novalidate>
-              <label for="playerName">Enter your name</label>
+
+            <form class="score-form" id="scoreForm" hidden novalidate>
+              <strong id="nameEntryTitle">Enter your name</strong>
+              <label class="visually-hidden" for="playerName">Enter your name</label>
               <input
                 id="playerName"
                 name="name"
@@ -150,12 +164,14 @@
             <button id="playAgainButton" type="button">Play again</button>
           </div>
         </div>
+        <div class="star-celebration" id="starCelebration" hidden aria-hidden="true">
+          <span>🤩</span><span>🤩</span><span>🤩</span><span>🤩</span><span>🤩</span>
+        </div>
         <div class="perfect-callout" id="perfectCallout" aria-live="polite">Perfect Hit!</div>
       </div>
     </section>
   </main>
 
-<script src="https://cdn.jsdelivr.net/npm/js-confetti@latest/dist/js-confetti.browser.js"></script>
-<script src="script.js"></script>
+<script type="module" src="script.js"></script>
 </body>
 </html>
