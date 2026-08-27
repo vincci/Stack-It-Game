@@ -1,13 +1,13 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
-  "name": "stack-it-game-dev",
+  "name": "stack-it-game",
   "compatibility_date": "2026-08-26",
   "pages_build_output_dir": ".pages-dist",
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "stack-it-game-leaderboard-dev",
-      "database_id": "6960c393-79b0-44bb-a17d-9de4d146e22b",
+      "database_name": "stack-it-game-leaderboard-production",
+      "database_id": "d9d05d4e-37ca-41c6-b713-18816a845bf4",
       "migrations_dir": "migrations"
     }
   ]
