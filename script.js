@@ -18,10 +18,6 @@ import {
 
   const board = requireElement("gameBoard");
   const stackLayer = requireElement("stackLayer");
-  const gameHud = requireElement("gameHud");
-  const hudStack = requireElement("hudStack");
-  const hudScore = requireElement("hudScore");
-  const hudSections = requireElement("hudSections");
   const startScreen = requireElement("startScreen");
   const startButton = requireElement("startButton");
   const gameOver = requireElement("gameOver");
@@ -42,11 +38,8 @@ import {
   const submitScoreButton = requireElement("submitScoreButton");
   const perfectCallout = requireElement("perfectCallout");
   const starCelebration = requireElement("starCelebration");
-  const birthdayBanner = requireElement("birthdayBanner");
-  const birthdayNoteButton = requireElement("birthdayNoteButton");
   const landing = requireElement("landing");
   const landingButton = requireElement("landingButton");
-  const cardPlayAgainButton = requireElement("cardPlayAgain");
 
   const tones = ["tomato", "mustard", "mint", "sky", "lilac", "cream"];
 
@@ -65,7 +58,6 @@ import {
   let completionTimer = 0;
   let scoreSubmissionInFlight = false;
   let submittedEntry = null;
-  let birthdayReturnFocus = null;
 
   function requireElement(id) {
     const element = document.getElementById(id);
@@ -121,9 +113,6 @@ import {
     board.dataset.score = String(score);
     board.dataset.stackCount = String(stackCount);
     board.dataset.currentSections = String(currentSections);
-    hudStack.textContent = `${stackCount}/${TOTAL_STACKS}`;
-    hudScore.textContent = String(score);
-    hudSections.textContent = String(currentSections);
   }
 
   function resetGame() {
@@ -146,12 +135,9 @@ import {
 
     gameOver.hidden = true;
     startScreen.hidden = true;
-    gameHud.hidden = false;
-    birthdayNoteButton.disabled = true;
     perfectCallout.classList.remove("is-visible");
     starCelebration.hidden = true;
     starCelebration.classList.remove("is-visible");
-    closeBirthdayNote(false);
     resetScoreOverlay();
     stackLayer.replaceChildren();
     board.classList.remove("is-over", "is-perfect", "is-complete");
@@ -397,61 +383,11 @@ import {
     }, 180);
   }
 
-  function fitArcText() {
-    const textEl = document.querySelector(".cake-arc-text");
-    const pathEl = document.getElementById("cakeTextArc");
-    if (!textEl || !pathEl) {
-      return;
-    }
-
-    const pathLength = pathEl.getTotalLength();
-    const textLength = textEl.getComputedTextLength();
-    if (textLength > pathLength * 0.92) {
-      const currentSize = parseFloat(getComputedStyle(textEl).fontSize);
-      textEl.style.fontSize = `${currentSize * (pathLength * 0.92 / textLength)}px`;
-    }
-  }
-
-  function randomizeDecorations() {
-    document.querySelectorAll(".sparkle, .heart-deco").forEach((el) => {
-      const baseX = parseFloat(el.dataset.baseX);
-      const baseY = parseFloat(el.dataset.baseY);
-      const jitterX = el.classList.contains("heart-deco") ? 12 : 16;
-      const jitterY = el.classList.contains("heart-deco") ? 10 : 12;
-      const x = baseX + (Math.random() * 2 - 1) * jitterX;
-      const y = baseY + (Math.random() * 2 - 1) * jitterY;
-      const rotation = Math.random() * 40 - 20;
-      el.setAttribute("transform", `translate(${x},${y}) rotate(${rotation})`);
-    });
-  }
-
   function celebrateCompletion() {
     starCelebration.hidden = false;
     starCelebration.classList.remove("is-visible");
     void starCelebration.offsetWidth;
     starCelebration.classList.add("is-visible");
-  }
-
-  function openBirthdayNote() {
-    birthdayReturnFocus = document.activeElement;
-    randomizeDecorations();
-    birthdayBanner.hidden = false;
-    birthdayBanner.classList.remove("is-visible");
-    void birthdayBanner.offsetWidth;
-    birthdayBanner.classList.add("is-visible");
-    requestAnimationFrame(() => {
-      fitArcText();
-      cardPlayAgainButton.focus({ preventScroll: true });
-    });
-  }
-
-  function closeBirthdayNote(restoreFocus = true) {
-    birthdayBanner.hidden = true;
-    birthdayBanner.classList.remove("is-visible");
-    if (restoreFocus && birthdayReturnFocus instanceof HTMLElement) {
-      birthdayReturnFocus.focus({ preventScroll: true });
-    }
-    birthdayReturnFocus = null;
   }
 
   function resetScoreOverlay() {
@@ -619,8 +555,6 @@ import {
     movingBlock = null;
     board.classList.remove("is-playing");
     board.classList.add("is-over");
-    birthdayNoteButton.disabled = false;
-
     finalScoreElement.textContent = String(score);
     yourScoreElement.textContent = String(score);
     resetScoreOverlay();
@@ -661,8 +595,6 @@ import {
   playAgainButton.addEventListener("click", resetGame);
   resultPlayAgainButton.addEventListener("click", resetGame);
   chooseSubmitButton.addEventListener("click", showNameEntry);
-  birthdayNoteButton.addEventListener("click", openBirthdayNote);
-  cardPlayAgainButton.addEventListener("click", () => closeBirthdayNote(true));
   scoreForm.addEventListener("submit", submitScore);
   playerNameInput.addEventListener("input", () => {
     nameError.hidden = true;
@@ -690,12 +622,6 @@ import {
       resetGame();
     } else if (state === "playing") {
       dropBlock();
-    }
-  });
-
-  document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && !birthdayBanner.hidden) {
-      closeBirthdayNote(true);
     }
   });
 
